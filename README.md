@@ -2,4 +2,6 @@
 
 このスクリプトは、キャリタス就活の就職検索結果ページで、各求人カードに「この企業を非表示」ボタンを追加します。
 
-   `https://github.com/yonagatsuki/career-tasu-hide-companies/blob/main/career-tasu-hide-companies.user.js`
+```
+https://raw.githubusercontent.com/yonagatsuki/career-tasu-hide-companies/main/career-tasu-hide-companies.user.js
+```
