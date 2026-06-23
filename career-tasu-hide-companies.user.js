@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         キャリタス就活 - 企業カード非表示
 // @namespace    https://job.career-tasu.jp/
-// @version      1.0.1
+// @version      1.0.3
 // @description  キャリタス就活の就職検索結果で、指定した企業の求人カードを次回以降も非表示にします。
 // @author       https://github.com/yonagatsuki/career-tasu-hide-companies
 // @homepageURL  https://github.com/yonagatsuki/career-tasu-hide-companies
@@ -76,6 +76,19 @@
     .ct-hide-button:hover {
       background: #f4f6f8;
       border-color: #8d98a8;
+    }
+    .ct-hide-button.c_btn {
+      width: 100%;
+      border-color: #8a96a6;
+      background: #fff;
+      color: #333;
+      font-weight: 700;
+    }
+    .ct-hide-button.c_btn:hover {
+      background: #f4f6f8;
+    }
+    .ct-hide-follow-area {
+      margin: 0 0 8px;
     }
     .ct-hide-toolbar {
       display: flex;
@@ -248,20 +261,23 @@
   }
 
   function findCompanyName(card, link) {
-    const likelyNameElement = card.querySelector([
-      '[class*="company"]',
-      '[class*="Company"]',
-      '[class*="corp"]',
-      '[class*="Corp"]',
-      '[class*="企業"]',
+    const nameSelectors = [
+      '.c_panelCompanyInfoMain__ttl',
+      '[class*="companyName"]',
+      '[class*="CompanyName"]',
+      '[class*="corpName"]',
+      '[class*="CorpName"]',
+      '[class*="企業名"]',
       '[class*="社名"]',
       'h1',
       'h2',
       'h3',
       'h4'
-    ].join(','));
+    ];
 
-    const fromLikely = normalizeName(likelyNameElement && likelyNameElement.textContent);
+    const fromLikely = nameSelectors
+      .map((selector) => normalizeName(card.querySelector(selector) && card.querySelector(selector).textContent))
+      .find((name) => name.length >= 2 && name.length <= 80);
     const fromLink = normalizeName(link && cleanLinkText(link));
     const candidates = [fromLikely, fromLink].filter(Boolean);
     return candidates.find((name) => name.length >= 2 && name.length <= 80) || '';
@@ -301,6 +317,12 @@
   }
 
   function addHideButton(card, company) {
+    const followButtonArea = card.querySelector('.c_panelCompanyInfo__btn');
+    if (followButtonArea) {
+      addCompanyHideButton(followButtonArea, company);
+      return;
+    }
+
     if (card.querySelector(':scope > .ct-hide-toolbar, .ct-hide-toolbar')) return;
 
     const toolbar = document.createElement('div');
@@ -327,6 +349,34 @@
 
     toolbar.appendChild(button);
     card.insertBefore(toolbar, card.firstChild);
+  }
+
+  function addCompanyHideButton(followButtonArea, company) {
+    if (followButtonArea.querySelector('.ct-hide-company-button')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'c_btn c_btn--full ct-hide-button ct-hide-company-button';
+    button.textContent = 'この企業を非表示';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const hiddenMap = loadHiddenMap();
+      hiddenMap[company.name] = {
+        name: company.name,
+        url: company.url,
+        hiddenAt: new Date().toISOString()
+      };
+      saveHiddenMap(hiddenMap);
+      hideMatchingCards();
+      renderPanelList();
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ct-hide-follow-area';
+    wrapper.appendChild(button);
+    followButtonArea.insertBefore(wrapper, followButtonArea.firstChild);
   }
 
   function getCompanyFromCard(card) {
