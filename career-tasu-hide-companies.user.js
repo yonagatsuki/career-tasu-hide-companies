@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         キャリタス就活 - 企業カード非表示
 // @namespace    https://job.career-tasu.jp/
-// @version      1.0.0
+// @version      1.0.1
 // @description  キャリタス就活の就職検索結果で、指定した企業の求人カードを次回以降も非表示にします。
 // @author       https://github.com/yonagatsuki/career-tasu-hide-companies
 // @homepageURL  https://github.com/yonagatsuki/career-tasu-hide-companies
@@ -18,6 +18,15 @@
   const STORAGE_KEY = 'careerTasuHiddenCompanies:v1';
   const PROCESSED_ATTR = 'data-ct-hide-processed';
   const HIDDEN_ATTR = 'data-ct-company-hidden';
+  const OWN_UI_SELECTOR = [
+    '#ct-hidden-panel',
+    '#ct-panel-backdrop',
+    '.ct-floating-open',
+    '.ct-panel',
+    '.ct-panel-backdrop',
+    '.ct-hidden-list',
+    '.ct-hidden-item'
+  ].join(',');
 
   const COMPANY_LINK_SELECTORS = [
     'a[href*="/company/"]',
@@ -214,6 +223,7 @@
 
   function isCompanyLink(link) {
     if (!link || !link.href) return false;
+    if (link.closest(OWN_UI_SELECTOR)) return false;
     return COMPANY_LINK_SELECTORS.some((selector) => {
       try {
         return link.matches(selector);
@@ -258,6 +268,8 @@
   }
 
   function findCardFromLink(link) {
+    if (!link || link.closest(OWN_UI_SELECTOR)) return null;
+
     for (const selector of CARD_SELECTORS) {
       const card = link.closest(selector);
       if (card && card !== document.body && card !== document.documentElement) {
@@ -272,12 +284,14 @@
     const cards = new Set();
 
     document.querySelectorAll(COMPANY_LINK_SELECTORS.join(',')).forEach((link) => {
+      if (link.closest(OWN_UI_SELECTOR)) return;
       const card = findCardFromLink(link);
       if (card) cards.add(card);
     });
 
     document.querySelectorAll(CARD_SELECTORS.join(',')).forEach((candidate) => {
       if (candidate === document.body || candidate === document.documentElement) return;
+      if (candidate.closest(OWN_UI_SELECTOR)) return;
       if (candidate.querySelector('a[href]') && findCompanyLink(candidate)) cards.add(candidate);
     });
 
@@ -328,6 +342,7 @@
 
   function processCard(card) {
     if (card.getAttribute(PROCESSED_ATTR) === '1') return;
+    if (card.closest(OWN_UI_SELECTOR)) return;
 
     const company = getCompanyFromCard(card);
     if (!company) return;
